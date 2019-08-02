@@ -1,0 +1,4 @@
+{
+  "baseUrl": "http://quasar.googlemaps.cypress.surge.sh/#",
+  "reporter": "mochawesome"
+}
