@@ -6,18 +6,19 @@
   "cordovaId": "org.cordova.quasar.googlemaps.cypress",
   "author": "author@email.com",
   "private": true,
-  "mapAPIKey": "<API-KEY-HERE>",
+  "mapAPIKey": "<MAP-API-KEY-HERE>",
   "scripts": {
     "lint": "eslint --ext .js,.vue src",
     "test": "echo \"No test specified\" && exit 0",
-    "test:e2e": "cypress open -d"
+    "cypress": "cypress open -d"
   },
   "dependencies": {
     "@quasar/extras": "^1.0.0",
     "axios": "^0.18.1",
-    "quasar": "^1.0.0",
-    "vue-i18n": "^8.0.0",
     "jquery": "^3.3.1",
+    "quasar": "^1.0.0",
+    "vue-gmaps": "^0.2.2",
+    "vue-i18n": "^8.0.0",
     "vue2-google-maps": "^0.10.5",
     "vuelidate": "^0.7.4"
   },

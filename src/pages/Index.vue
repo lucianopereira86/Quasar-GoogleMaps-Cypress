@@ -1,14 +1,23 @@
 <template>
   <q-page>
+    <AutoComplete
+      class="full-width"
+      v-if="map"
+      :map="map"
+      :origin="myPosition"
+      :setDestination="setDestination"
+      :setDistance="setDistance"
+    />
     <GmapMap
       ref="mapRef"
       :center="myPosition"
       :zoom="18"
       :options="{disableDefaultUI:true}"
       map-type-id="roadmap"
-      style="width: 100%; height:90vh"
+      style="width: 100%; height:80vh"
     >
       <gmap-info-window
+        v-if="info.position"
         @closeclick="info.isOpen=false"
         :opened="info.isOpen"
         :position="info.position"
@@ -19,70 +28,41 @@
           }
         }"
       >
-        <!-- <div v-if="info.shop">
-          <q-item @click.native="showProducts()">
-            <q-item-side :avatar="info.shop.imgurl" />
-            <q-item-main>
-              {{info.shop.description}}
-              <div class="q-mt-sm">
-                <q-icon name="star" color="yellow" v-for="n in 5" :key="n" />
-              </div>
-            </q-item-main>
-          </q-item>
+        <div v-if="info.position.address">
+          <q-card class="my-card relative-position">
+            <q-card-section>
+              <span v-html="info.position.address"></span>
+            </q-card-section>
+          </q-card>
         </div>
-        <div v-else-if="info.spot_id">
-          <q-item @click.native="share(info)">
-            <q-item-main>
-              <span v-if="info.isMine">MEU SPOT</span>
-              <span v-else>OUTRO SPOT</span>
-              <div class="q-mt-sm">
-                <q-icon name="redeem" color="negative" />
-                x {{info.gifts.length}}
-              </div>
-            </q-item-main>
-          </q-item>
-        </div>-->
-        <div>
+        <div v-else>
           <span>My Position</span>
         </div>
       </gmap-info-window>
 
+      <GmapMarker ref="myMarker" :position="myPosition" @click="openInfoWindow()" />
       <GmapMarker
-        ref="myMarker"
-        :position="myPosition"
-        :draggable="true"
-        @drag="updateCoordinates"
-        @click="openInfoWindow()"
+        v-if="destination"
+        ref="destMarker"
+        :position="destination"
+        :icon="{ url: 'http://maps.google.com/mapfiles/ms/icons/blue-dot.png' }"
+        @click="openInfoWindow(true)"
       />
-      <!-- <GmapMarker
-        :key="index"
-        v-for="(m, index) in markers"
-        :icon="m.icon"
-        :position="m.position"
-        :clickable="true"
-        @click="openInfoWindow(m)"
-      />-->
     </GmapMap>
-    <!-- <q-page-sticky position="top-left" :offset="[18, 18]">
-      <q-btn round color="dark" @click="exit()">
-        <q-icon name="exit_to_app" size="1.8em"></q-icon>
-      </q-btn>
-    </q-page-sticky>-->
-    <q-page-sticky position="top-right" :offset="[18, 18]">
-      <q-btn round color="primary" @click="centerCamera()">
+    <q-page-sticky position="top-right" :offset="[18, 80]">
+      <q-btn round color="positive" @click="centerCamera(myPosition)" data-cy="btnCamera">
         <q-icon name="my_location" size="1.8em"></q-icon>
       </q-btn>
     </q-page-sticky>
-    <!-- <q-page-sticky position="top-right" :offset="[18, 100]" v-if="isInsideSpot()">
-      <q-btn round color="white" @click="share(currentSpot)">
-        <q-icon name="card_giftcard" color="negative" size="1.8em"></q-icon>
+    <q-page-sticky position="top-right" :offset="[18, 150]">
+      <q-btn round color="negative" @click="addRemoveCircle()" data-cy="btnCircle">
+        <q-icon :name="circle? 'remove_circle_outline' : 'add_circle_outline'" size="1.8em"></q-icon>
       </q-btn>
     </q-page-sticky>
-    <q-page-sticky position="bottom" :offset="[0,50]" v-if="!isInsideSpot()">
-      <q-btn round color="secondary" @click="share()" size="1.2em">
-        <q-icon name="share" size="1.8em"></q-icon>
-      </q-btn>
-    </q-page-sticky>-->
+    <DialogCircle ref="DialogCircle" />
+    <div class="absolute-bottom text-center q-ma-md bg-white" v-if="distance">
+      <span class="text-h6">Distance: {{distance}}</span>
+    </div>
   </q-page>
 </template>
 
@@ -90,30 +70,38 @@
 </style>
 
 <script>
+import Vue from 'vue'
 import { mapAPIKey } from '../../package.json'
 import * as VueGoogleMaps from 'vue2-google-maps'
+import DialogCircle from '../components/DialogCircle'
 
-import Vue from 'vue'
+import AutoComplete from '../components/AutoComplete'
+
 Vue.use(VueGoogleMaps, {
   load: {
     key: mapAPIKey,
-    libraries: ['places', 'geometry']
+    libraries: ['places', 'directions']
   }
 })
-// let radius = 50
 
 export default {
   page: 'PageIndex',
+  components: {
+    DialogCircle,
+    AutoComplete
+  },
   data () {
     return {
       self: this,
       map: null,
       myPosition: { lat: 0, lng: 0 },
-      markers: [],
+      destination: null,
       loading: false,
       info: {
         isOpen: false
-      }
+      },
+      circle: null,
+      distance: ''
     }
   },
   mounted () {
@@ -121,172 +109,69 @@ export default {
       this.map = map
 
       this.getPosition(() => {
-
-        //   // const self = this
-        //   // setInterval(function () {
-        //   //   self.getPosition();
-        //   // }.bind(this), 10000);
-
+        const self = this
+        setInterval(function () {
+          self.getPosition()
+        }, 10000)
       }, () => {
         this.$q.loading.hide()
       })
     })
   },
   methods: {
-    // getShops () {
-    //   this.$axios.get('/v1/shops')
-    //     .then((response) => {
-    //       let shops = response.data
-    //       console.log('/v1/shops', shops)
-    //       shops.forEach(s => {
-    //         this.markers.push({
-    //           icon: 'statics/icons/icon-shop.png',
-    //           shop: s,
-    //           position: {
-    //             lat: s.latitude,
-    //             lng: s.longitude
-    //           }
-    //         })
-    //       })
-    //       this.$q.loading.hide()
-
-    //       this.getSpots()
-    //     })
-    //     .catch((error) => Erro.getError(error, () => {
-    //       this.$q.loading.hide()
-    //     }))
-    // },
-    // getSpots () {
-    //   if (this.spots.length > 0) {
-    //     this.spots.forEach(spot => {
-    //       spot.setMap(null)
-    //     })
-    //     this.spots = []
-    //   }
-    //   this.$q.loading.show({ message: 'Procurando Spots...' })
-    //   this.$axios.get('/v1/spots')
-    //     .then((response) => {
-    //       let spots = response.data
-    //       console.log('/v1/spots', spots)
-    //       spots.forEach(s => {
-    //         console.log('/v1/spots => s', s)
-    //         let spot = {
-    //           spot_id: s._id,
-    //           isMine: s.user_id == this.user_id,
-    //           position: {
-    //             lat: s.latitude,
-    //             lng: s.longitude
-    //           },
-    //           gifts: s.gifts
-    //         }
-
-    //         this.addSpot(spot)
-    //       })
-    //       this.$q.loading.hide()
-    //       Aviso.show(spots.length + ' spot(s) ao redor')
-    //     })
-    //     .catch((error) => Erro.getError(error, () => {
-    //       this.$q.loading.hide()
-    //     }))
-    // },
-    openInfoWindow () { // marker) {
-      // if (marker) {
-      //   this.info = {
-      //     position: marker.position,
-      //     isOpen: true,
-      //     shop: marker.shop,
-      //     spot_id: marker.spot_id,
-      //     isMine: marker.isMine,
-      //     gifts: marker.gifts
-      //   }
-      // } else {
-      this.info = {
-        position: this.myPosition,
-        isOpen: true
+    openInfoWindow (isDestination) {
+      if (isDestination) {
+        this.info = {
+          position: this.destination,
+          isOpen: true
+        }
+      } else {
+        this.info = {
+          position: this.myPosition,
+          isOpen: true
+        }
       }
-      // }
     },
-    centerCamera () {
+    centerCamera (position, isDestination) {
       console.log('this.$refs.mapRef', this.$refs.mapRef)
-      this.$refs.mapRef.panTo(this.myPosition)
-      this.openInfoWindow()
+      this.$refs.mapRef.panTo(position)
+      this.openInfoWindow(isDestination)
     },
-    // showProducts () {
-    //   this.$q.loading.show()
-    //   this.$axios.get('/v1/products', { params: { shop_id: this.info.shop._id } })
-    //     .then((response) => {
-    //       this.$q.loading.hide()
-    //       let products = response.data
-    //       console.log('/v1/products => products', products)
-    //       if (products.length === 0) {
-    //         Aviso.show('A loja não tem produtos')
-    //         return
-    //       }
-    //       console.log('this.$refs', this.$refs)
-    //       this.$refs.modalProducts.open(this.info.shop, products)
-    //     })
-    //     .catch((error) => Erro.getError(error, () => {
-    //       this.$q.loading.hide()
-    //     }))
-    // },
-    // share (info) {
-    //   const self = this
-    //   self.$refs.modalShare.open(info)
-    // },
-    // addSpot (spot) {
-    //   console.log('spot', spot)
-
-    //   let fillColor = spot.isMine ? '#0000FF' : '#FF0000'
-    //   var circle = new google.maps.Circle({
-    //     center: spot.position,
-    //     radius: radius,
-    //     fillColor: fillColor,
-    //     fillOpacity: 0.1,
-    //     map: this.map,
-    //     strokeColor: '#FFFFFF',
-    //     strokeOpacity: 0.1,
-    //     strokeWeight: 2,
-    //     // DADOS DO SPOT
-    //     spot_id: spot.spot_id,
-    //     isMine: spot.isMine,
-    //     position: spot.position,
-    //     gifts: spot.gifts
-    //   })
-
-    //   this.spots.push(circle)
-    // },
-    // isInsideSpot () {
-    //   let isInside = false
-    //   this.spots.forEach(spot => {
-    //     console.log('this.myPosition', this.myPosition)
-    //     console.log('spot.position', spot.position)
-
-    //     let pointA = new google.maps.LatLng(this.myPosition.lat, this.myPosition.lng)
-    //     let pointB = new google.maps.LatLng(spot.position.lat, spot.position.lng)
-    //     console.log('pointA', pointA)
-    //     console.log('pointB', pointB)
-
-    //     var distanceInMetres = google.maps.geometry.spherical.computeDistanceBetween(pointA, pointB)
-    //     console.log('distanceInMetres', distanceInMetres)
-    //     isInside = distanceInMetres <= radius
-    //     console.log('isInside', isInside)
-    //     if (isInside) {
-    //       this.currentSpot = spot
-    //       console.log('currentSpot', spot)
-    //     }
-    //   })
-    //   return isInside
-    // },
+    addRemoveCircle () {
+      if (this.circle) {
+        this.circle.setMap(null)
+        this.circle = null
+      } else {
+        let callback = (hex, radius, opacity) => {
+          this.circle = new window.google.maps.Circle({
+            center: this.myPosition,
+            radius: radius,
+            fillColor: hex,
+            fillOpacity: opacity,
+            map: this.map,
+            strokeColor: '#FFFFFF',
+            strokeOpacity: 0.1,
+            strokeWeight: 2
+          })
+        }
+        this.$refs.DialogCircle.open(callback)
+      }
+    },
     getPosition (callback, error) {
       const self = this
       navigator.geolocation.getCurrentPosition(
         function (position) {
-          console.log('position', position)
-          self.myPosition.lat = position.coords.latitude
-          self.myPosition.lng = position.coords.longitude
-          console.log('this.myPosition', self.myPosition)
+          if (parseFloat(parseFloat(position.coords.latitude).toFixed(4)) !==
+            parseFloat(parseFloat(self.myPosition.lat).toFixed(4)) &&
+            parseFloat(parseFloat(position.coords.longitude).toFixed(4)) !==
+            parseFloat(parseFloat(self.myPosition.lng).toFixed(4))) {
+            console.log('position', position)
+            self.myPosition.lat = position.coords.latitude
+            self.myPosition.lng = position.coords.longitude
+            console.log('this.myPosition', self.myPosition)
 
-          if (callback) { callback() }
+            if (callback) { callback() }
+          }
         },
         function (err) {
           console.error('navigator.geolocation.getCurrentPosition', err)
@@ -303,8 +188,24 @@ export default {
         lng: location.latLng.lng()
       }
       this.info.position = this.myPosition
-      this.centerCamera()
+      this.centerCamera(this.myPosition)
+    },
+    setDestination (destination) {
+      console.log('setDestination => destination', destination)
+      this.destination = destination
+      if (destination) {
+        this.centerCamera(destination, true)
+      } else { this.info.isOpen = false }
+    },
+    setDistance (distance) {
+      this.distance = distance
     }
   }
 }
 </script>
+<style scoped>
+.my-card {
+  width: 100%;
+  max-width: 250px;
+}
+</style>
