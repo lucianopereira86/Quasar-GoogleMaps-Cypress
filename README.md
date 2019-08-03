@@ -38,7 +38,7 @@ Search for the Places API and enable it.
 
 ![google03](/docs/google03.JPG)
 
-Create credentials with API Key type.
+Create credentials with the API Key type.
 
 ![google04](/docs/google04.JPG)
 
@@ -58,7 +58,7 @@ Search for the Directions API and enable it.
 
 ![google08](/docs/google08.JPG)
 
-You will use three APIs: Directions, Maps and Places.
+Three APIs will be used: Directions, Maps and Places.
 
 ![google09](/docs/google09.JPG)
 
@@ -93,7 +93,7 @@ The Camera button animates the map camera toward the user's position.
 
 ![quasar04](/docs/quasar04.JPG)
 
-The Circle button with a plus icon opens a modal that allows the user to add a circle around its marker with customized color, radius and opacity. If the Circle button has a minus icon, it will remove the circle.
+The Circle button with a plus icon opens a modal that allows the user to add a circle around its marker with a customized color, radius and opacity. If the Circle button has a minus icon, it will remove the circle.
 
 ![quasar05](/docs/quasar05.JPG)
 
@@ -117,14 +117,15 @@ After clicked, a path will be drawn between the origin (the user's position) and
 The total distance between them will be shown at the bottom.
 
 ![quasar10](/docs/quasar10.JPG)
-When the path is drawn, the Clear button will be visible instead of the Directions button and it will allow to remove the place's marker and the drawn path.
+
+After the path is drawn, the Clear button will be visible instead of the Directions button and it will allow to remove the place's marker and the drawn path.
 
 ![quasar11](/docs/quasar11.JPG)
 
 ## Cypress
 
 Now let's test our application automatically.
-Inside the "/cypress/integration" folder there are the test scripts to be executed.
+Inside the "/cypress/integration" folder are the test scripts to be executed.
 While keeping the application running, open the Cypress Browser with this command in another terminal:
 
 ```batch
@@ -135,8 +136,8 @@ It will list the test files inside the "/cypress/integration" folder.
 
 ![cypress01](/docs/cypress01.JPG)
 
-Click on each option to open the test window, allow the geolocation detection and wait for the result.
-Below is the result for each test. Some of them need the user interaction:
+Click on each option to open the test window, allow the geolocation detection when asked and wait for the result.
+Some of the test need the user interaction.
 
 Center Camera Test
 
