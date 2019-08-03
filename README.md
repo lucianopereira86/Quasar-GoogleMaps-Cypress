@@ -15,7 +15,8 @@ Example of a Quasar app with Google Maps and Cypress automated tests
 ## Objective
 
 You will learn how to use the Google Maps APIs to add markers, draw circles, search for places and draw paths to the destinations in a Quasar app. Then we will test the application with [Cypress](https://www.cypress.io/), an amazing tool for testing front-end applications. For more examples about Cypress, visit the [Vila do Silício](http://viladosilicio.com.br/testes-e2e-com-cypress-no-quasar-framework/) blog.
-Try the app now running on [surge](https://quasar-googlemaps.surge.sh/#/).
+
+Try the app now running on [quasar-googlemaps.surge.sh](https://quasar-googlemaps.surge.sh/#/).
 
 ## Before Start
 
