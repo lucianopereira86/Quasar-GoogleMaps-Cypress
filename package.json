@@ -15,7 +15,7 @@
   "dependencies": {
     "@quasar/extras": "^1.0.0",
     "axios": "^0.18.1",
-    "jquery": "^3.3.1",
+    "jquery": "^3.5.0",
     "quasar": "^1.0.0",
     "vue-gmaps": "^0.2.2",
     "vue-i18n": "^8.0.0",
